@@ -4,7 +4,7 @@ name: Build and Publish llmio Docker Image
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 env:
