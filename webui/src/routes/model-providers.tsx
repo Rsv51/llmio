@@ -64,6 +64,7 @@ const formSchema = z.object({
   provider_id: z.number().positive({ message: "提供商ID必须大于0" }),
   tool_call: z.boolean(),
   structured_output: z.boolean(),
+  image: z.boolean(),
   weight: z.number().positive({ message: "权重必须大于0" }),
 });
 
@@ -82,6 +83,7 @@ export default function ModelProvidersPage() {
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
   const [testType, setTestType] = useState<"connectivity" | "react">("connectivity");
+  const [selectedProviderType, setSelectedProviderType] = useState<string>("all");
   const [reactTestResult, setReactTestResult] = useState<{
     loading: boolean;
     messages: string;
@@ -107,6 +109,7 @@ export default function ModelProvidersPage() {
       provider_id: 0,
       tool_call: false,
       structured_output: false,
+      image: false,
       weight: 1,
     },
   });
@@ -192,7 +195,7 @@ export default function ModelProvidersPage() {
     try {
       await createModelProvider(values);
       setOpen(false);
-      form.reset({ model_id: selectedModelId || 0, provider_name: "", provider_id: 0, tool_call: false, structured_output: false, weight: 1 });
+      form.reset({ model_id: selectedModelId || 0, provider_name: "", provider_id: 0, tool_call: false, structured_output: false, image: false, weight: 1 });
       if (selectedModelId) {
         fetchModelProviders(selectedModelId);
       }
@@ -377,6 +380,7 @@ export default function ModelProvidersPage() {
       provider_id: association.ProviderID,
       tool_call: association.ToolCall,
       structured_output: association.StructuredOutput,
+      image: association.Image,
       weight: association.Weight,
     });
     setOpen(true);
@@ -390,6 +394,7 @@ export default function ModelProvidersPage() {
       provider_id: 0,
       tool_call: false,
       structured_output: false,
+      image: false,
       weight: 1
     });
     setOpen(true);
@@ -405,6 +410,17 @@ export default function ModelProvidersPage() {
     form.setValue("model_id", id);
   };
 
+  // 获取唯一的提供商类型列表
+  const providerTypes = Array.from(new Set(providers.map(p => p.Type).filter(Boolean)));
+
+  // 根据选择的提供商类型过滤模型提供商关联
+  const filteredModelProviders = selectedProviderType && selectedProviderType !== "all"
+    ? modelProviders.filter(association => {
+        const provider = providers.find(p => p.ID === association.ProviderID);
+        return provider?.Type === selectedProviderType;
+      })
+    : modelProviders;
+
 
 
 
@@ -416,6 +432,19 @@ export default function ModelProvidersPage() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-2xl font-bold">模型提供商关联</h2>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Select value={selectedProviderType} onValueChange={setSelectedProviderType}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="按类型筛选" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              {providerTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={selectedModelId?.toString() || ""} onValueChange={handleModelChange}>
             <SelectTrigger className="w-full sm:w-64">
               <SelectValue placeholder="选择模型" />
@@ -449,13 +478,14 @@ export default function ModelProvidersPage() {
                   <TableHead>提供商</TableHead>
                   <TableHead>工具调用</TableHead>
                   <TableHead>结构化输出</TableHead>
+                  <TableHead>视觉</TableHead>
                   <TableHead>权重</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {modelProviders.map((association) => {
+                {filteredModelProviders.map((association) => {
                   const provider = providers.find(p => p.ID === association.ProviderID);
                   return (
                     <TableRow key={association.ID}>
@@ -471,6 +501,11 @@ export default function ModelProvidersPage() {
                       <TableCell>
                         <span className={association.StructuredOutput ? "text-green-500" : "text-red-500"}>
                           {association.StructuredOutput ? '✓' : '✗'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={association.Image ? "text-green-500" : "text-red-500"}>
+                          {association.Image ? '✓' : '✗'}
                         </span>
                       </TableCell>
                       <TableCell>{association.Weight}</TableCell>
@@ -542,7 +577,7 @@ export default function ModelProvidersPage() {
 
           {/* 移动端卡片布局 */}
           <div className="sm:hidden space-y-4">
-            {modelProviders.map((association) => {
+            {filteredModelProviders.map((association) => {
               const provider = providers.find(p => p.ID === association.ProviderID);
               return (
                 <div key={association.ID} className="border rounded-lg p-4 space-y-3">
@@ -562,6 +597,12 @@ export default function ModelProvidersPage() {
                         结构化输出:
                         <span className={association.StructuredOutput ? "text-green-500" : "text-red-500"}>
                           {association.StructuredOutput ? '✓' : '✗'}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        视觉:
+                        <span className={association.Image ? "text-green-500" : "text-red-500"}>
+                          {association.Image ? '✓' : '✗'}
                         </span>
                       </p>
                       <p className="text-sm text-gray-500">权重: {association.Weight}</p>
@@ -757,6 +798,26 @@ export default function ModelProvidersPage() {
                     <div className="space-y-1 leading-none">
                       <FormLabel>
                         结构化输出
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        视觉
                       </FormLabel>
                     </div>
                   </FormItem>
