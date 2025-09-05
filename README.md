@@ -1,6 +1,6 @@
 # LLMIO
 
-LLMIO 是一个基于 Go 的服务，提供统一的 API 来与各种大语言模型（LLM）进行交互。它支持在不同提供商之间进行智能负载均衡，并高效地处理请求。该服务还提供了一个现代化的 Web UI 界面，方便用户管理和监控系统。
+LLMIO 是一个基于 Golang 的项目，提供统一的 API 来与各种大语言模型（LLM）进行交互。它支持在不同提供商之间进行智能负载均衡，并高效地处理请求。该服务还提供了一个现代化的 Web UI 界面，方便用户管理和监控系统。
 
 ## 功能特性
 
@@ -66,6 +66,7 @@ docker compose up -d
 
 3. 初始化数据库：
    ```bash
+   mkdir db
    go run main.go
    ```
    这将自动创建一个 SQLite 数据库文件（`db/llmio.db`）并初始化数据库结构。
@@ -220,6 +221,8 @@ GET `/v1/models`
 ### 后端开发
 
 ```bash
+# 创建db目录
+mkdir db
 go run main.go
 ```
 
